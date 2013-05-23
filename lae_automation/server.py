@@ -389,7 +389,7 @@ shares.total = 1
 # source emits once per minute zooming to a higher resolution has no utility, and
 # can be confusing.  Therefore we set this value to match our emission rate.
 # i.e. 60000 milliseconds = 1 minute
-SETUPMETRIC_TEMPLATE = """setup-metric GAUGE Kilobytes %d %s %s"""
+SETUPMETRIC_TEMPLATE = """setup-metric GAUGE MebiBytes %d %s %s"""
 RESOLUTION_MILLISECONDS = 60000
 
 def provision_rss_sink(sink_name_suffix, collection_names):
@@ -509,13 +509,13 @@ def main():
     PID = get_pid(STORAGESERVER_PID_PATH)
     for event_to_emit in emiteventlist:
         if 'rss' in event_to_emit['name']:
-            kbofrss = get_mem_used(PID)[0]/1000 #Perhaps change to emitting bytes.
+            MiBofrss = get_mem_used(PID)[0]/2**20 #MiBs.
             emit_time = int(time.time())
             emitstring = make_emit_string(str( event_to_emit['name'] ),
                                           int( emit_time*1000 ),
                                           int( event_to_emit['resolution'] ),
                                           str( event_to_emit['type'] ),
-                                          int( kbofrss )  )
+                                          int( MiBofrss )  )
             fname = 'emissionlogs/%s' % emit_time
             fh = open(fname, 'w')
             fh.write(emitstring)
