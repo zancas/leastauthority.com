@@ -315,7 +315,7 @@ postfix	postfix/main_mailer_type select	No configuration"""
     sudo_apt_get('-y dist-upgrade')
     sudo_apt_get('-y autoremove')
     print >>stdout, "Rebooting server..."
-    #api.reboot(300)
+    api.reboot(300)
     print >>stdout, "Installing dependencies..."
     sudo_apt_get('install -y nginx')
     write(NGINX_CONFIG, '/etc/nginx/sites-enabled/mailman', True)
