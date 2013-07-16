@@ -57,8 +57,47 @@ enabled = false
 local.directory =
 """
 
+NGINX_ENABLED_MAILMAN_CONF = """server {
+    listen       8443;
+    server_name  localhost;
+    #charset koi8-r;
+    #access_log  /var/log/nginx/log/host.access.log  main;
+    location / {
+        root   /usr/share/nginx/html;
+        index  index.html index.htm;
+    }
+    #error_page  404              /404.html;
+    # redirect server error pages to the static page /50x.html
+    #
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html;
+    }
+    # proxy the PHP scripts to Apache listening on 127.0.0.1:80
+    #
+    #location ~ \.php$ {
+    #    proxy_pass   http://127.0.0.1;
+    #}
+    # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
+    #
+    #location ~ \.php$ {
+    #    root           html;
+    #    fastcgi_pass   127.0.0.1:9000;
+    #    fastcgi_index  index.php;
+    #    fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+    #    include        fastcgi_params;
+    #}
+    # deny access to .htaccess files, if Apache's document root
+    # concurs with nginx's one
+    #
+    #location ~ /\.ht {
+    #    deny  all;
+    #}
+}"""
+
 NGINX_SIGNING_KEY = """-----BEGIN PGP PUBLIC KEY BLOCK-----
 Version: GnuPG v1.4.11 (FreeBSD)
+
 mQENBE5OMmIBCAD+FPYKGriGGf7NqwKfWC83cBV01gabgVWQmZbMcFzeW+hMsgxH
 W6iimD0RsfZ9oEbfJCPG0CRSZ7ppq5pKamYs2+EJ8Q2ysOFHHwpGrA2C8zyNAs4I
 QxnZZIbETgcSwFtDun0XiqPwPZgyuXVm9PAbLZRbfBzm8wR/3SWygqZBBLdQk5TE
@@ -85,53 +124,25 @@ Va3l3WuB+rgKjsQ=
 =A015
 -----END PGP PUBLIC KEY BLOCK-----"""
 
-NGINX_CONFIG = """# You may add here your                                                                                             
-# server {                                                                                                          
-#       ...                                                                                                         
-# }                                                                                                                 
-# statements for each of your virtual hosts                                                                         
-                                                                                                                    
-server {                                                                                                            
-    listen 8443 default ssl;                                                                                        
-    server_name leastauthority.com;                                                                                 
-    ssl on;                                                                                                         
-    ssl_certificate /home/website/secret_config/rapidssl/server.crt;                                                                  
-    ssl_certificate_key /home/website/secret_config/rapidssl/server.key;                                                              
-                                                                                                                    
-    ssl_session_cache    shared:SSL:10m;                                                                            
-    ssl_session_timeout 10000m;                                                                                     
-                                                                                                                    
-    ssl_protocols SSLv3 TLSv1;                                                                                      
-    ssl_ciphers RC4-SHA:AES128-SHA:DHE-DSS-AES128-SHA:DHE-RSA-AES128-SHA:AES256-SHA:DHE-DSS-AES256-SHA:DHE-RSA-AES25
-6-SHA;                                                                                                              
-    ssl_prefer_server_ciphers on;                                                                                   
-                                                                                                                    
-    add_header Strict-Transport-Security max-age=100000;                                                            
-                                                                                                                    
-    add_header  Cache-Control public;                                                                               
-    expires 30d;                                                                                                    
-                                                                                                                    
-    gzip on;                                                                                                        
-    gzip_static on;                                                                                                 
-    gzip_comp_level 9;                                                                                              
-    gzip_types *;                                                                                                   
-                                                                                                                    
-    access_log /home/website/mailman/server.log;                                                                    
-                                                                                                                    
-    # match https://leastauthority.com:8443/cgi-bin/mailman/listinfo/*                                              
-    # and ask thttpd to run the CGI for us                                                                          
-    location /cgi-bin {                                                                                             
-        expires off;                                                                                                
-        include proxy_params;                                                                                       
-        proxy_pass http://127.0.0.1:8581;                                                                           
-    }                                                                                                               
-    location /images/mailman {                                                                                      
-        alias /var/lib/mailman/icons;                                                                               
-    }                                                                                                               
-    location /pipermail {                                                                                           
-        alias /var/lib/mailman/archives/public;                                                                     
-        autoindex on;                                                                                               
-    }                                                                                                               
+NGINX_DOT_CONF = """user  nginx;
+worker_processes  1;
+error_log  /var/log/nginx/error.log warn;
+pid        /var/run/nginx.pid;
+events {
+    worker_connections  1024;
+}
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+    access_log  /var/log/nginx/access.log  main;
+    sendfile        on;
+    #tcp_nopush     on;
+    keepalive_timeout  65;
+    #gzip  on;
+    include /etc/nginx/sites-enabled/mailman
 }"""
 
 class NotListeningError(Exception):
@@ -309,23 +320,27 @@ def install_infrastructure_server(publichost, admin_privkey_path, website_pubkey
 postfix	postfix/main_mailer_type select	No configuration"""
 
     sudo('add-apt-repository "deb http://nginx.org/packages/ubuntu/ lucid nginx"')
-    run('echo "deb http://nginx.org/packages/ubuntu/ lucid nginx" > nginx-stable-lucid.list')
-    write(NGINX_SIGNING_KEY, '/etc/apt/sources.list.d/nginx-stable-lucid.list')
+    sudo('echo "deb http://nginx.org/packages/ubuntu/ lucid nginx" > nginx-stable-lucid.list')
+    write(NGINX_SIGNING_KEY, 'nginx_signing.key')
+    sudo('apt-key add nginx_signing.key')
 
+    write(NGINX_DOT_CONF, 'nginx.conf_temp')
+    #sudo('mv nginx.conf_temp /etc/nginx/nginx.conf')
     sudo_apt_get('update')
     sudo_apt_get('-y dist-upgrade')
     sudo_apt_get('-y autoremove')
     print >>stdout, "Rebooting server..."
-    api.reboot(300)
+    #api.reboot(300)
     print >>stdout, "Installing dependencies..."
     sudo_apt_get('install -y nginx')
-    write(NGINX_CONFIG, '/etc/nginx/sites-enabled/mailman', True)
-    sudo('rm /etc/nginx/sites-enabled/default')
+    write(NGINX_ENABLED_MAILMAN_CONF, 'mailman_temp', True)
+    sudo('mkdir -p /etc/nginx/sites-enabled/')
+    sudo('mv -f mailman_temp /etc/nginx/sites-enabled/mailman')
+    sudo('rm -f /etc/nginx/sites-enabled/default')
     sudo('service nginx restart')
 
     sudo_apt_get('install -y python-dev python-setuptools git-core python-jinja2 '
                             'python-nevow python-dateutil fabric python-foolscap')
-    #sudo_easy_install('foolscap')
     write(postfixdebconfstring, '/home/ubuntu/postfixdebconfs.txt')
     sudo('debconf-set-selections /home/ubuntu/postfixdebconfs.txt')  
     sudo_apt_get('install -y postfix')
