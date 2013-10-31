@@ -10,15 +10,19 @@ describe('callback registration', function () {
 });
 
 describe('The submission handler', function () { 
-    var asideStripe;
+    var asideStripe, asidejQuery;
     beforeEach(function () {
-	this.asideStripe = window.Stripe;
-	delete window.Stripe;
+	asidejQuery = window.$;
+	window.$ = function(argument) {return argument};
+	asideStripe = window.Stripe;
+	window.Stripe = {};
     });
 
     afterEach( function () {
-	window.Stripe = this.asideStripe;
-	delete this.asideStripe;
+	window.$ = asidejQuery;
+	asidejQuery = {};
+	window.Stripe = asideStripe;
+	asideStripe = {};
     });
 
     it('registers the response handler', function () {
