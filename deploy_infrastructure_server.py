@@ -5,14 +5,14 @@
 (3) provisions it with a version of the secret_config repository
 (4) launches the webserver specified in those repositories
 
-  AWS credentials, ami parameters (e.g. size and ami id) and metadata to associate with the instance 
+  AWS credentials, ami parameters (e.g. size and ami id) and metadata to associate with the instance
 (e.g. instance name) are parsed from the lae_automation_config.json configuration file.
 """
 
-import sys, os, argparse 
+import sys, os, argparse
 from lae_automation.config import Config
 from twisted.python.filepath import FilePath
-from lae_automation.initialize import deploy_infrastructure_EC2 
+from lae_automation.initialize import deploy_infrastructure_EC2
 from lae_automation.signup import EC2_ENDPOINT
 from lae_automation.server import install_infrastructure_server
 from twisted.internet import defer
